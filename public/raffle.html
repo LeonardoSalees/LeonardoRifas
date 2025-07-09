@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rifa - Rifas Online</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="./css/styles.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-ticket-alt me-2"></i>
+                Rifas Online
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">
+                    <i class="fas fa-arrow-left me-1"></i>
+                    Voltar
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div id="loading" class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Carregando...</span>
+            </div>
+        </div>
+
+        <div id="raffleContent" class="d-none">
+            <!-- Informações da Rifa -->
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 id="raffleTitle"></h3>
+                        </div>
+                        <div class="card-body">
+                            <p id="raffleDescription"></p>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <strong>Preço por número:</strong>
+                                    <span id="rafflePrice" class="text-success"></span>
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>Total de números:</strong>
+                                    <span id="totalNumbers"></span>
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>Data do sorteio:</strong>
+                                    <span id="drawDate"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Estatísticas</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-2">
+                                <strong>Números vendidos:</strong>
+                                <span id="soldCount" class="badge bg-success">0</span>
+                            </div>
+                            <div class="mb-2">
+                                <strong>Números disponíveis:</strong>
+                                <span id="availableCount" class="badge bg-primary">0</span>
+                            </div>
+                            <div class="progress">
+                                <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seleção de Números -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5>Escolha seu número</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Buscar número específico:</label>
+                                <input type="number" class="form-control" id="searchNumber" placeholder="Digite o número">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Filtrar por status:</label>
+                                <select class="form-select" id="statusFilter">
+                                    <option value="all">Todos</option>
+                                    <option value="available">Disponíveis</option>
+                                    <option value="sold">Vendidos</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="numbersGrid" class="numbers-grid"></div>
+                    <div class="mt-3">
+                        <button class="btn btn-outline-primary btn-sm" onclick="loadMoreNumbers()">
+                            Carregar mais números
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vencedor (se houver) -->
+            <div id="winnerSection" class="card mt-4 d-none">
+                <div class="card-header bg-success text-white">
+                    <h5><i class="fas fa-trophy me-2"></i>Rifa Finalizada - Vencedor</h5>
+                </div>
+                <div class="card-body">
+                    <div id="winnerInfo"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Compra -->
+    <div class="modal fade" id="purchaseModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Comprar Número</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="purchaseForm">
+                        <div class="mb-3">
+                            <label class="form-label">Número selecionado:</label>
+                            <input type="number" class="form-control" id="selectedNumber" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="buyerName" class="form-label">Nome completo:</label>
+                            <input type="text" class="form-control" id="buyerName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="buyerEmail" class="form-label">Email:</label>
+                            <input type="email" class="form-control" id="buyerEmail" required>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Valor a pagar: <span id="paymentAmount" class="text-success"></span></strong>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="fas fa-shopping-cart me-2"></i>Confirmar Compra
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Pagamento -->
+    <div class="modal fade" id="paymentModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Pagamento PIX</h5>
+                </div>
+                <div class="modal-body text-center">
+                    <p>Escaneie o QR Code abaixo para realizar o pagamento:</p>
+                    <div id="qrCodeContainer" class="mb-3"></div>
+                    <div class="mb-3">
+                        <button class="btn btn-primary" onclick="checkPaymentStatus()">
+                            <i class="fas fa-sync me-2"></i>Verificar Pagamento
+                        </button>
+                    </div>
+                    <div id="paymentStatus"></div>
+                    <hr>
+                    <div class="mt-3">
+                        <button class="btn btn-outline-success btn-sm" onclick="simulatePayment()">
+                            <i class="fas fa-check me-2"></i>Simular Pagamento (Teste)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="./js/raffle.js"></script>
+</body>
+</html>
