@@ -102,33 +102,43 @@ router.get('/:payment_id/status', async (req, res) => {
 });
 
 // Webhook for payment notifications
-router.post('/webhook', async (req, res) => {
+router.post('/webhook', SecurityValidator.createRateLimit(60 * 1000, 50), async (req, res) => {
     try {
-        const { data } = req.body;
+        const { data, action, type } = req.body;
         
-        if (!data || !data.id) {
+        // Validate webhook data
+        if (!data || !data.id || type !== 'payment') {
+            console.log('Webhook inválido recebido:', req.body);
             return res.status(400).json({ error: 'Dados inválidos' });
         }
         
-        const paymentResult = await mercadoPago.processWebhook(data.id);
+        // Log webhook received
+        console.log(`Webhook recebido: ${action} para pagamento ${data.id}`);
         
-        // Update payment status
-        await db.run(
-            'UPDATE payments SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE mercadopago_id = ?',
-            [paymentResult.status, data.id]
-        );
-        
-        // If payment approved, update participant
-        if (paymentResult.approved) {
-            await db.run(`
-                UPDATE participants 
-                SET status = 'paid', updated_at = CURRENT_TIMESTAMP 
-                WHERE id = (
-                    SELECT participant_id 
-                    FROM payments 
-                    WHERE mercadopago_id = ?
-                )
-            `, [data.id]);
+        // Process only payment updates
+        if (action === 'payment.updated' || action === 'payment.created') {
+            const paymentResult = await mercadoPago.processWebhook(data.id);
+            
+            // Update payment status
+            await db.run(
+                'UPDATE payments SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE mercadopago_id = ?',
+                [paymentResult.status, data.id]
+            );
+            
+            // If payment approved, update participant
+            if (paymentResult.approved) {
+                await db.run(`
+                    UPDATE participants 
+                    SET status = 'paid', updated_at = CURRENT_TIMESTAMP 
+                    WHERE id = (
+                        SELECT participant_id 
+                        FROM payments 
+                        WHERE mercadopago_id = ?
+                    )
+                `, [data.id]);
+                
+                console.log(`Pagamento ${data.id} aprovado - participante atualizado`);
+            }
         }
         
         res.status(200).json({ received: true });
