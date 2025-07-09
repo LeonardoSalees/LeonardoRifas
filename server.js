@@ -13,7 +13,7 @@ const paymentRoutes = require('./routes/payments');
 const notificationRoutes = require('./routes/notifications');
 
 // Initialize database
-const db = require('./config/database');
+const db = process.env.VERCEL === '1' ? require('./config/database-vercel') : require('./config/database');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -49,6 +49,28 @@ app.use(session({
 // Static files
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Database initialization middleware for Vercel
+if (process.env.VERCEL === '1') {
+    let dbInitialized = false;
+    
+    const initializeDatabase = async (req, res, next) => {
+        if (!dbInitialized) {
+            try {
+                console.log('Inicializando banco de dados para Vercel...');
+                await db.initialize();
+                dbInitialized = true;
+                console.log('Banco de dados inicializado com sucesso');
+            } catch (err) {
+                console.error('Erro ao inicializar banco de dados:', err);
+                return res.status(500).json({ error: 'Erro interno do servidor' });
+            }
+        }
+        next();
+    };
+    
+    app.use(initializeDatabase);
+}
+
 // Routes
 app.use('/admin', adminRoutes);
 app.use('/api/raffles', raffleRoutes);
@@ -75,14 +97,17 @@ app.use((req, res) => {
 });
 
 // Initialize database and start server
-db.initialize().then(() => {
-    app.listen(PORT, '0.0.0.0', () => {
-        console.log(`Servidor rodando na porta ${PORT}`);
-        console.log(`Acesse: http://localhost:${PORT}`);
+if (process.env.VERCEL !== '1') {
+    // Local development
+    db.initialize().then(() => {
+        app.listen(PORT, '0.0.0.0', () => {
+            console.log(`Servidor rodando na porta ${PORT}`);
+            console.log(`Acesse: http://localhost:${PORT}`);
+        });
+    }).catch(err => {
+        console.error('Erro ao inicializar banco de dados:', err);
+        process.exit(1);
     });
-}).catch(err => {
-    console.error('Erro ao inicializar banco de dados:', err);
-    process.exit(1);
-});
+}
 
 module.exports = app;
