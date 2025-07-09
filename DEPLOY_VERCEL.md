@@ -54,17 +54,40 @@ projeto/
 
 ### 4. Solução de Problemas
 
-#### Erro 404: NOT_FOUND
-**Causa**: Rotas não configuradas corretamente
-**Solução**: Verificar `vercel.json` e deploy novamente
+#### Erro 404: NOT_FOUND (ID: gru1::xxxxx)
+**Causa principal**: Configuração incorreta do vercel.json ou variáveis de ambiente
+
+**Soluções em ordem:**
+
+1. **Verificar variáveis de ambiente no Vercel:**
+   - VERCEL=1 (obrigatório)
+   - NODE_ENV=production
+   - SESSION_SECRET=sua-chave-forte
+   - ADMIN_PASSWORD=sua-senha-admin
+
+2. **Testar URLs corretas:**
+   - Admin login: `https://seu-app.vercel.app/admin-login.html`
+   - Admin panel: `https://seu-app.vercel.app/admin` (após login)
+   - API: `https://seu-app.vercel.app/api/raffles`
+
+3. **Aguardar cold start:**
+   - Primeira requisição pode demorar 10-30 segundos
+   - Vercel precisa inicializar o banco na primeira chamada
+
+4. **Verificar logs:**
+   - Painel Vercel > Functions > View Function Logs
+   - Procurar erros de inicialização
 
 #### Erro ao carregar rifas
-**Causa**: Banco de dados não inicializado
-**Solução**: Aguardar primeira requisição inicializar o banco
+**Causa**: Banco de dados não inicializado ou timeout
+**Solução**: 
+- Aguardar primeira requisição (cold start)
+- Verificar logs para erros de banco
+- Tentar novamente após 30 segundos
 
 #### Sessões perdidas
 **Causa**: Serverless functions são stateless
-**Solução**: Usar banco de dados para sessões
+**Solução**: Usar banco de dados para sessões (já implementado)
 
 ### 5. Deploy Recomendado para Produção
 
