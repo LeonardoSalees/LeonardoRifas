@@ -42,14 +42,16 @@ Preferred communication style: Simple, everyday language.
 ### Utilities
 - **CSV Exporter**: Exports participant data and raffle statistics
 - **Lottery Utils**: Calculates winner numbers based on federal lottery results
+- **WhatsApp Notifications**: Bulk messaging system for participant communication
 
 ## Data Flow
 
 1. **Admin Creates Raffle**: Admin logs in and creates a new raffle with title, description, number of tickets, price, and draw date
-2. **User Participation**: Users browse active raffles, select available numbers, and provide contact information
+2. **User Participation**: Users browse active raffles, select available numbers, and provide contact information including WhatsApp
 3. **Payment Process**: System generates PIX payment through Mercado Pago API with QR code
 4. **Payment Confirmation**: Webhooks update payment status and participant status
 5. **Winner Selection**: Admin inputs federal lottery number to calculate winner automatically
+6. **Notifications**: Admin can send WhatsApp messages to participants for payment reminders, draw updates, and winner announcements
 
 ## External Dependencies
 

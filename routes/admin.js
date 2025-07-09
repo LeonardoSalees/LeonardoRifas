@@ -165,7 +165,7 @@ router.get('/raffles/:id/export', auth, async (req, res) => {
         }
         
         const participants = await db.all(`
-            SELECT p.number, p.name, p.email, p.status, p.created_at,
+            SELECT p.number, p.name, p.email, p.phone, p.city, p.status, p.created_at,
                    pay.status as payment_status
             FROM participants p
             LEFT JOIN payments pay ON p.id = pay.participant_id

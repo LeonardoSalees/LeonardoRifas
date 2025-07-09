@@ -8,13 +8,15 @@ class CSVExporter {
             numero: participant.number,
             nome: participant.name,
             email: participant.email,
+            whatsapp: participant.phone || '',
+            cidade: participant.city || '',
             status: participant.status === 'paid' ? 'Pago' : 'Reservado',
             status_pagamento: participant.payment_status === 'approved' ? 'Aprovado' : 'Pendente',
             data_participacao: new Date(participant.created_at).toLocaleDateString('pt-BR')
         }));
 
         // Create CSV string manually for better control
-        const headers = ['Número', 'Nome', 'Email', 'Status', 'Status Pagamento', 'Data Participação'];
+        const headers = ['Número', 'Nome', 'Email', 'WhatsApp', 'Cidade', 'Status', 'Status Pagamento', 'Data Participação'];
         let csvString = headers.join(',') + '\n';
 
         csvData.forEach(row => {
@@ -22,6 +24,8 @@ class CSVExporter {
                 row.numero,
                 `"${row.nome}"`,
                 `"${row.email}"`,
+                `"${row.whatsapp}"`,
+                `"${row.cidade}"`,
                 `"${row.status}"`,
                 `"${row.status_pagamento}"`,
                 `"${row.data_participacao}"`

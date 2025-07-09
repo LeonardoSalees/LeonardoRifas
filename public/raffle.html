@@ -148,6 +148,14 @@
                             <input type="email" class="form-control" id="buyerEmail" required>
                         </div>
                         <div class="mb-3">
+                            <label for="buyerPhone" class="form-label">WhatsApp/Telefone:</label>
+                            <input type="tel" class="form-control" id="buyerPhone" placeholder="(11) 99999-9999" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="buyerCity" class="form-label">Cidade:</label>
+                            <input type="text" class="form-control" id="buyerCity" placeholder="São Paulo - SP">
+                        </div>
+                        <div class="mb-3">
                             <strong>Valor a pagar: <span id="paymentAmount" class="text-success"></span></strong>
                         </div>
                         <button type="submit" class="btn btn-success w-100">
@@ -170,14 +178,14 @@
                     <p>Escaneie o QR Code abaixo para realizar o pagamento:</p>
                     <div id="qrCodeContainer" class="mb-3"></div>
                     <div class="mb-3">
-                        <button class="btn btn-primary" onclick="checkPaymentStatus()">
+                        <button class="btn btn-primary" onclick="raffleApp.checkPaymentStatus()">
                             <i class="fas fa-sync me-2"></i>Verificar Pagamento
                         </button>
                     </div>
                     <div id="paymentStatus"></div>
                     <hr>
                     <div class="mt-3">
-                        <button class="btn btn-outline-success btn-sm" onclick="simulatePayment()">
+                        <button class="btn btn-outline-success btn-sm" onclick="raffleApp.simulatePayment()">
                             <i class="fas fa-check me-2"></i>Simular Pagamento (Teste)
                         </button>
                     </div>

@@ -44,6 +44,8 @@ class Database {
                 number INTEGER NOT NULL,
                 name TEXT NOT NULL,
                 email TEXT NOT NULL,
+                phone TEXT,
+                city TEXT,
                 status TEXT DEFAULT 'reserved',
                 payment_id TEXT,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

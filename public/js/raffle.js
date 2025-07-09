@@ -162,6 +162,8 @@ class RafflePage {
         document.getElementById('paymentAmount').textContent = `R$ ${parseFloat(this.raffle.price_per_number).toFixed(2)}`;
         document.getElementById('buyerName').value = '';
         document.getElementById('buyerEmail').value = '';
+        document.getElementById('buyerPhone').value = '';
+        document.getElementById('buyerCity').value = '';
         
         new bootstrap.Modal(document.getElementById('purchaseModal')).show();
     }
@@ -171,7 +173,9 @@ class RafflePage {
             const formData = {
                 number: parseInt(document.getElementById('selectedNumber').value),
                 name: document.getElementById('buyerName').value,
-                email: document.getElementById('buyerEmail').value
+                email: document.getElementById('buyerEmail').value,
+                phone: document.getElementById('buyerPhone').value,
+                city: document.getElementById('buyerCity').value
             };
 
             // Reserve number

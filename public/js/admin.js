@@ -3,6 +3,7 @@
 class AdminApp {
     constructor() {
         this.currentRaffleId = null;
+        this.currentNotificationRaffleId = null;
         this.init();
     }
 
@@ -22,6 +23,11 @@ class AdminApp {
         document.getElementById('drawForm').addEventListener('submit', (e) => {
             e.preventDefault();
             this.performDraw();
+        });
+
+        // Notification type change
+        document.getElementById('notification_type').addEventListener('change', (e) => {
+            this.loadPresetMessage();
         });
     }
 
@@ -112,6 +118,9 @@ class AdminApp {
                         </button>
                         <button class="btn btn-outline-info" onclick="adminApp.exportParticipants(${raffle.id})">
                             <i class="fas fa-download me-1"></i>Exportar
+                        </button>
+                        <button class="btn btn-outline-success" onclick="adminApp.openNotificationModal(${raffle.id})">
+                            <i class="fab fa-whatsapp me-1"></i>WhatsApp
                         </button>
                         ${raffle.status === 'active' ? `
                             <button class="btn btn-outline-warning" onclick="adminApp.openDrawModal(${raffle.id})">
@@ -205,6 +214,8 @@ class AdminApp {
                             <th>Número</th>
                             <th>Nome</th>
                             <th>Email</th>
+                            <th>WhatsApp</th>
+                            <th>Cidade</th>
                             <th>Status</th>
                             <th>Data</th>
                         </tr>
@@ -215,6 +226,8 @@ class AdminApp {
                                 <td><span class="badge bg-primary">${p.number}</span></td>
                                 <td>${p.name}</td>
                                 <td>${p.email}</td>
+                                <td>${p.phone || '-'}</td>
+                                <td>${p.city || '-'}</td>
                                 <td>
                                     <span class="status-badge ${p.status}">
                                         ${p.status === 'paid' ? 'Pago' : 'Reservado'}
@@ -323,6 +336,176 @@ class AdminApp {
         } catch (error) {
             console.error('Erro ao deletar rifa:', error);
             this.showError(error.message);
+        }
+    }
+
+    // Notification methods
+    openNotificationModal(raffleId) {
+        this.currentNotificationRaffleId = raffleId;
+        document.getElementById('notification_filter').value = 'all';
+        document.getElementById('notification_type').value = 'custom';
+        document.getElementById('notification_message').value = '';
+        document.getElementById('notificationResults').innerHTML = '';
+        new bootstrap.Modal(document.getElementById('notificationModal')).show();
+    }
+
+    loadPresetMessage() {
+        const type = document.getElementById('notification_type').value;
+        const messageTextarea = document.getElementById('notification_message');
+        
+        const messages = {
+            payment_reminder: `Olá! Você reservou um número na nossa rifa, mas ainda não finalizou o pagamento.\n\nNão perca sua chance! Complete o pagamento e garante sua participação no sorteio.\n\nQualquer dúvida, estamos aqui para ajudar!`,
+            draw_reminder: `🎲 O sorteio da nossa rifa está chegando!\n\nFique atento ao resultado que será divulgado em breve.\n\nBoa sorte! 🍀`,
+            winner: `🎉 Resultado da Rifa já disponível!\n\nConfira se você foi o sortudo vencedor.\n\nObrigado por participar!`
+        };
+        
+        if (messages[type]) {
+            messageTextarea.value = messages[type];
+        } else {
+            messageTextarea.value = '';
+        }
+    }
+
+    async generateNotifications() {
+        try {
+            const filter = document.getElementById('notification_filter').value;
+            const message = document.getElementById('notification_message').value;
+            const type = document.getElementById('notification_type').value;
+            
+            if (!message.trim()) {
+                this.showError('Por favor, digite uma mensagem');
+                return;
+            }
+            
+            let endpoint = `/api/notifications/whatsapp/bulk/${this.currentNotificationRaffleId}`;
+            
+            // Special handling for winner notification
+            if (type === 'winner') {
+                const response = await fetch(`/api/notifications/winner-message/${this.currentNotificationRaffleId}`);
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.winner) {
+                        this.showSingleNotification(result.winner, result.message);
+                        return;
+                    } else {
+                        this.showError('Rifa ainda não foi sorteada ou não há vencedor');
+                        return;
+                    }
+                }
+            }
+            
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message: message,
+                    filter: filter
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Erro ao gerar notificações');
+            }
+            
+            const result = await response.json();
+            this.showNotificationResults(result.notifications);
+            
+        } catch (error) {
+            console.error('Erro ao gerar notificações:', error);
+            this.showError('Erro ao gerar notificações');
+        }
+    }
+
+    showNotificationResults(notifications) {
+        const container = document.getElementById('notificationResults');
+        
+        if (notifications.length === 0) {
+            container.innerHTML = `
+                <div class="alert alert-warning">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Nenhum participante com WhatsApp encontrado.
+                </div>
+            `;
+            return;
+        }
+        
+        const notificationsHTML = `
+            <div class="alert alert-success">
+                <i class="fas fa-check-circle me-2"></i>
+                ${notifications.length} links de WhatsApp gerados com sucesso!
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Número</th>
+                            <th>Nome</th>
+                            <th>WhatsApp</th>
+                            <th>Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${notifications.map(notification => `
+                            <tr>
+                                <td><span class="badge bg-primary">${notification.number}</span></td>
+                                <td>${notification.name}</td>
+                                <td>${notification.phone}</td>
+                                <td>
+                                    <a href="${notification.whatsapp_url}" target="_blank" class="btn btn-success btn-sm">
+                                        <i class="fab fa-whatsapp me-1"></i>Enviar
+                                    </a>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-3">
+                <button class="btn btn-primary" onclick="adminApp.openAllWhatsApp()">
+                    <i class="fab fa-whatsapp me-2"></i>Abrir Todos os WhatsApp
+                </button>
+            </div>
+        `;
+        
+        container.innerHTML = notificationsHTML;
+        this.currentNotifications = notifications;
+    }
+
+    showSingleNotification(winner, message) {
+        const container = document.getElementById('notificationResults');
+        
+        const phoneFormatted = winner.phone?.replace(/\D/g, '');
+        const whatsappUrl = `https://wa.me/55${phoneFormatted}?text=${encodeURIComponent(message)}`;
+        
+        container.innerHTML = `
+            <div class="alert alert-info">
+                <i class="fas fa-trophy me-2"></i>
+                Mensagem do vencedor gerada!
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <h6>Vencedor: ${winner.name}</h6>
+                    <p><strong>Número:</strong> ${winner.number}</p>
+                    <p><strong>WhatsApp:</strong> ${winner.phone}</p>
+                    <div class="mt-3">
+                        <a href="${whatsappUrl}" target="_blank" class="btn btn-success">
+                            <i class="fab fa-whatsapp me-2"></i>Enviar Mensagem de Parabéns
+                        </a>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    openAllWhatsApp() {
+        if (this.currentNotifications) {
+            this.currentNotifications.forEach((notification, index) => {
+                setTimeout(() => {
+                    window.open(notification.whatsapp_url, '_blank');
+                }, index * 1000); // Delay para evitar bloqueio do navegador
+            });
         }
     }
 

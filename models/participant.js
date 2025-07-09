@@ -2,11 +2,11 @@ const db = require('../config/database');
 
 class Participant {
     static async create(data) {
-        const { raffle_id, number, name, email } = data;
+        const { raffle_id, number, name, email, phone, city } = data;
         
         const result = await db.run(
-            'INSERT INTO participants (raffle_id, number, name, email, status) VALUES (?, ?, ?, ?, ?)',
-            [raffle_id, number, name, email, 'reserved']
+            'INSERT INTO participants (raffle_id, number, name, email, phone, city, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [raffle_id, number, name, email, phone, city, 'reserved']
         );
         
         return result.id;

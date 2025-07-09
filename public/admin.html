@@ -144,6 +144,57 @@
         </div>
     </div>
 
+    <!-- Modal para Notificações WhatsApp -->
+    <div class="modal fade" id="notificationModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Notificações WhatsApp</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="notification_filter" class="form-label">Filtrar participantes:</label>
+                                <select class="form-select" id="notification_filter">
+                                    <option value="all">Todos os participantes</option>
+                                    <option value="paid">Apenas pagos</option>
+                                    <option value="reserved">Apenas reservados</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="notification_type" class="form-label">Tipo de mensagem:</label>
+                                <select class="form-select" id="notification_type">
+                                    <option value="custom">Personalizada</option>
+                                    <option value="payment_reminder">Lembrete de pagamento</option>
+                                    <option value="draw_reminder">Lembrete do sorteio</option>
+                                    <option value="winner">Resultado do sorteio</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="notification_message" class="form-label">Mensagem:</label>
+                        <textarea class="form-control" id="notification_message" rows="4" 
+                                  placeholder="Digite sua mensagem aqui..."></textarea>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-primary" onclick="adminApp.generateNotifications()">
+                            <i class="fas fa-paper-plane me-2"></i>Gerar Links WhatsApp
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" onclick="adminApp.loadPresetMessage()">
+                            <i class="fas fa-magic me-2"></i>Carregar Modelo
+                        </button>
+                    </div>
+                    <div id="notificationResults" class="mt-4"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="./js/admin.js"></script>
 </body>

@@ -89,11 +89,11 @@ router.get('/:id/numbers/:number/available', async (req, res) => {
 router.post('/:id/reserve', async (req, res) => {
     try {
         const { id } = req.params;
-        const { number, name, email } = req.body;
+        const { number, name, email, phone, city } = req.body;
         
         // Validation
         if (!number || !name || !email) {
-            return res.status(400).json({ error: 'Todos os campos são obrigatórios' });
+            return res.status(400).json({ error: 'Número, nome e email são obrigatórios' });
         }
         
         if (!email.includes('@')) {
@@ -123,8 +123,8 @@ router.post('/:id/reserve', async (req, res) => {
         
         // Reserve the number
         const result = await db.run(
-            'INSERT INTO participants (raffle_id, number, name, email, status) VALUES (?, ?, ?, ?, ?)',
-            [id, number, name, email, 'reserved']
+            'INSERT INTO participants (raffle_id, number, name, email, phone, city, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [id, number, name, email, phone, city, 'reserved']
         );
         
         res.json({

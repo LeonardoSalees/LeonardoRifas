@@ -9,6 +9,7 @@ require('dotenv').config();
 const adminRoutes = require('./routes/admin');
 const raffleRoutes = require('./routes/raffles');
 const paymentRoutes = require('./routes/payments');
+const notificationRoutes = require('./routes/notifications');
 
 // Initialize database
 const db = require('./config/database');
@@ -40,6 +41,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/admin', adminRoutes);
 app.use('/api/raffles', raffleRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Main route
 app.get('/', (req, res) => {
