@@ -11,9 +11,20 @@ const adminRoutes = require('./routes/admin');
 const raffleRoutes = require('./routes/raffles');
 const paymentRoutes = require('./routes/payments');
 const notificationRoutes = require('./routes/notifications');
+const authRoutes = require('./routes/auth');
 
 // Initialize database
-const db = process.env.VERCEL === '1' ? require('./config/database-vercel') : require('./config/database');
+let db;
+if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('postgresql')) {
+    // Use PostgreSQL if available
+    db = require('./config/database-postgresql');
+} else if (process.env.VERCEL === '1') {
+    // Use Vercel SQLite
+    db = require('./config/database-vercel');
+} else {
+    // Use local SQLite
+    db = require('./config/database');
+}
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -72,6 +83,7 @@ if (process.env.VERCEL === '1') {
 }
 
 // Routes
+app.use('/', authRoutes);
 app.use('/admin', adminRoutes);
 app.use('/api/raffles', raffleRoutes);
 app.use('/api/payments', paymentRoutes);

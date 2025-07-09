@@ -2,7 +2,15 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const path = require('path');
 const auth = require('../middleware/auth');
-const db = require('../config/database');
+// Dynamic database configuration
+let db;
+if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('postgresql')) {
+    db = require('../config/database-postgresql');
+} else if (process.env.VERCEL === '1') {
+    db = require('../config/database-vercel');
+} else {
+    db = require('../config/database');
+}
 const csvExporter = require('../utils/csvExporter');
 const lottery = require('../utils/lottery');
 const SecurityValidator = require('../security/validation');
@@ -30,7 +38,7 @@ router.post('/login', SecurityValidator.adminRateLimit(), async (req, res) => {
         // Sanitize inputs
         const sanitizedUsername = SecurityValidator.sanitizeInput(username);
         
-        const admin = await db.get('SELECT * FROM admin_users WHERE username = ?', [sanitizedUsername]);
+        const admin = await db.get('SELECT * FROM users WHERE username = $1', [sanitizedUsername]);
         
         if (!admin || !await bcrypt.compare(password, admin.password_hash)) {
             return res.status(401).json({ error: 'Credenciais inválidas' });

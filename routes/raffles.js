@@ -1,5 +1,13 @@
 const express = require('express');
-const db = require('../config/database');
+// Dynamic database configuration
+let db;
+if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('postgresql')) {
+    db = require('../config/database-postgresql');
+} else if (process.env.VERCEL === '1') {
+    db = require('../config/database-vercel');
+} else {
+    db = require('../config/database');
+}
 const SecurityValidator = require('../security/validation');
 
 const router = express.Router();
@@ -13,7 +21,7 @@ router.get('/', async (req, res) => {
                    SUM(CASE WHEN p.status = 'paid' THEN 1 ELSE 0 END) as paid_numbers
             FROM raffles r
             LEFT JOIN participants p ON r.id = p.raffle_id
-            WHERE r.status = 'active'
+            WHERE r.is_active = true
             GROUP BY r.id
             ORDER BY r.created_at DESC
         `);
