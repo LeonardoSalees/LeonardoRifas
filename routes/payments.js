@@ -1,13 +1,19 @@
 const express = require('express');
 const db = require('../config/database');
 const mercadoPago = require('../config/mercadopago');
+const SecurityValidator = require('../security/validation');
 
 const router = express.Router();
 
 // Create payment
-router.post('/create', async (req, res) => {
+router.post('/create', SecurityValidator.paymentRateLimit(), async (req, res) => {
     try {
         const { participant_id } = req.body;
+        
+        // Input validation
+        if (!participant_id || !SecurityValidator.validateNumber(participant_id)) {
+            return res.status(400).json({ error: 'ID do participante inválido' });
+        }
         
         // Get participant and raffle info
         const participant = await db.get(`

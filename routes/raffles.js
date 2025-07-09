@@ -1,5 +1,6 @@
 const express = require('express');
 const db = require('../config/database');
+const SecurityValidator = require('../security/validation');
 
 const router = express.Router();
 
@@ -86,19 +87,37 @@ router.get('/:id/numbers/:number/available', async (req, res) => {
 });
 
 // Reserve a number
-router.post('/:id/reserve', async (req, res) => {
+router.post('/:id/reserve', SecurityValidator.createRateLimit(60 * 1000, 10), async (req, res) => {
     try {
         const { id } = req.params;
         const { number, name, email, phone, city } = req.body;
         
-        // Validation
+        // Input validation
         if (!number || !name || !email) {
             return res.status(400).json({ error: 'Número, nome e email são obrigatórios' });
         }
         
-        if (!email.includes('@')) {
+        if (!SecurityValidator.validateEmail(email)) {
             return res.status(400).json({ error: 'Email inválido' });
         }
+        
+        if (!SecurityValidator.validateName(name)) {
+            return res.status(400).json({ error: 'Nome inválido' });
+        }
+        
+        if (phone && !SecurityValidator.validatePhone(phone)) {
+            return res.status(400).json({ error: 'Telefone inválido' });
+        }
+        
+        if (city && !SecurityValidator.validateCity(city)) {
+            return res.status(400).json({ error: 'Cidade inválida' });
+        }
+        
+        // Sanitize inputs
+        const sanitizedName = SecurityValidator.sanitizeInput(name);
+        const sanitizedEmail = SecurityValidator.sanitizeInput(email);
+        const sanitizedPhone = SecurityValidator.sanitizeInput(phone);
+        const sanitizedCity = SecurityValidator.sanitizeInput(city);
         
         // Check if raffle exists and is active
         const raffle = await db.get('SELECT * FROM raffles WHERE id = ? AND status = "active"', [id]);
@@ -121,10 +140,10 @@ router.post('/:id/reserve', async (req, res) => {
             return res.status(400).json({ error: 'Número já foi escolhido' });
         }
         
-        // Reserve the number
+        // Reserve the number with sanitized data
         const result = await db.run(
             'INSERT INTO participants (raffle_id, number, name, email, phone, city, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [id, number, name, email, phone, city, 'reserved']
+            [id, number, sanitizedName, sanitizedEmail, sanitizedPhone, sanitizedCity, 'reserved']
         );
         
         res.json({

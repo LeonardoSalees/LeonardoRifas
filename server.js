@@ -3,6 +3,7 @@ const session = require('express-session');
 const SQLiteStore = require('connect-sqlite3')(session);
 const path = require('path');
 const cors = require('cors');
+const SecurityValidator = require('./security/validation');
 require('dotenv').config();
 
 // Import routes
@@ -17,10 +18,19 @@ const db = require('./config/database');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust proxy for rate limiting
+app.set('trust proxy', 1);
+
+// Security middleware
+app.use(SecurityValidator.securityHeaders());
+
+// Basic rate limiting
+app.use(SecurityValidator.createRateLimit());
+
 // Middleware
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Session configuration
 app.use(session({
@@ -29,8 +39,10 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: { 
-        secure: false, // Set to true in production with HTTPS
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        httpOnly: true,
+        sameSite: 'strict'
     }
 }));
 

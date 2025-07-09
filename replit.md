@@ -95,5 +95,10 @@ Preferred communication style: Simple, everyday language.
 ### Security Considerations
 - Session-based authentication with secure cookies
 - Password hashing with bcrypt
-- Input validation on server side
+- Comprehensive input validation and sanitization
 - CSRF protection through session management
+- Rate limiting per functionality (general, payments, admin)
+- SQL injection prevention with prepared statements
+- XSS protection with input sanitization
+- Security headers (CSP, HSTS, X-Frame-Options)
+- Production-ready security configuration

@@ -89,16 +89,27 @@ class Database {
 
     async runMigrations() {
         try {
-            // Add phone and city columns to participants table if they don't exist
-            await this.run(`ALTER TABLE participants ADD COLUMN phone TEXT`);
+            // Check if phone column exists
+            const phoneExists = await this.get(`PRAGMA table_info(participants)`);
+            const hasPhone = phoneExists && phoneExists.name === 'phone';
+            
+            if (!hasPhone) {
+                await this.run(`ALTER TABLE participants ADD COLUMN phone TEXT`);
+            }
         } catch (error) {
-            // Column already exists, ignore error
+            // Column already exists or other error, ignore
         }
         
         try {
-            await this.run(`ALTER TABLE participants ADD COLUMN city TEXT`);
+            // Check if city column exists
+            const cityExists = await this.get(`PRAGMA table_info(participants)`);
+            const hasCity = cityExists && cityExists.name === 'city';
+            
+            if (!hasCity) {
+                await this.run(`ALTER TABLE participants ADD COLUMN city TEXT`);
+            }
         } catch (error) {
-            // Column already exists, ignore error
+            // Column already exists or other error, ignore
         }
     }
 

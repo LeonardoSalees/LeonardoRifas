@@ -5,6 +5,7 @@ const auth = require('../middleware/auth');
 const db = require('../config/database');
 const csvExporter = require('../utils/csvExporter');
 const lottery = require('../utils/lottery');
+const SecurityValidator = require('../security/validation');
 
 const router = express.Router();
 
@@ -17,11 +18,19 @@ router.get('/login', (req, res) => {
 });
 
 // Admin login POST
-router.post('/login', async (req, res) => {
+router.post('/login', SecurityValidator.adminRateLimit(), async (req, res) => {
     try {
         const { username, password } = req.body;
         
-        const admin = await db.get('SELECT * FROM admin_users WHERE username = ?', [username]);
+        // Input validation
+        if (!username || !password) {
+            return res.status(400).json({ error: 'Username e senha são obrigatórios' });
+        }
+        
+        // Sanitize inputs
+        const sanitizedUsername = SecurityValidator.sanitizeInput(username);
+        
+        const admin = await db.get('SELECT * FROM admin_users WHERE username = ?', [sanitizedUsername]);
         
         if (!admin || !await bcrypt.compare(password, admin.password_hash)) {
             return res.status(401).json({ error: 'Credenciais inválidas' });
