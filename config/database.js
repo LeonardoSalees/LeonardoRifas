@@ -80,8 +80,26 @@ class Database {
             await this.run(query);
         }
 
+        // Run migrations for existing tables
+        await this.runMigrations();
+
         // Create default admin user if not exists
         await this.createDefaultAdmin();
+    }
+
+    async runMigrations() {
+        try {
+            // Add phone and city columns to participants table if they don't exist
+            await this.run(`ALTER TABLE participants ADD COLUMN phone TEXT`);
+        } catch (error) {
+            // Column already exists, ignore error
+        }
+        
+        try {
+            await this.run(`ALTER TABLE participants ADD COLUMN city TEXT`);
+        } catch (error) {
+            // Column already exists, ignore error
+        }
     }
 
     async createDefaultAdmin() {
