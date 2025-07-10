@@ -2,11 +2,7 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const path = require('path');
 const auth = require('../middleware/auth');
-// Dynamic database configuration
-let db;
-if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('postgresql')) {
-    db = require('../config/database-postgresql');
-} 
+const db = require('../config/database-postgresql');
 const csvExporter = require('../utils/csvExporter');
 const lottery = require('../utils/lottery');
 const SecurityValidator = require('../security/validation');
@@ -25,21 +21,18 @@ router.get('/login', (req, res) => {
 router.post('/login', SecurityValidator.adminRateLimit(), async (req, res) => {
     try {
         const { username, password } = req.body;
-        
-        // Input validation
+
         if (!username || !password) {
             return res.status(400).json({ error: 'Username e senha são obrigatórios' });
         }
-        
-        // Sanitize inputs
+
         const sanitizedUsername = SecurityValidator.sanitizeInput(username);
-        
         const admin = await db.get('SELECT * FROM users WHERE username = $1', [sanitizedUsername]);
-        
+
         if (!admin || !await bcrypt.compare(password, admin.password_hash)) {
             return res.status(401).json({ error: 'Credenciais inválidas' });
         }
-        
+
         req.session.adminId = admin.id;
         res.json({ success: true });
     } catch (error) {
@@ -71,7 +64,7 @@ router.get('/raffles', auth, async (req, res) => {
             GROUP BY r.id
             ORDER BY r.created_at DESC
         `);
-        
+
         res.json(raffles);
     } catch (error) {
         console.error('Erro ao buscar rifas:', error);
@@ -83,25 +76,25 @@ router.get('/raffles', auth, async (req, res) => {
 router.post('/raffles', auth, async (req, res) => {
     try {
         const { title, description, total_numbers, price_per_number, draw_date } = req.body;
-        
-        // Validation
+
         if (!title || !total_numbers || !price_per_number || !draw_date) {
             return res.status(400).json({ error: 'Todos os campos obrigatórios devem ser preenchidos' });
         }
-        
+
         if (total_numbers < 1 || total_numbers > 10000) {
             return res.status(400).json({ error: 'Quantidade de números deve ser entre 1 e 10000' });
         }
-        
+
         if (price_per_number < 0.01) {
             return res.status(400).json({ error: 'Preço por número deve ser maior que R$ 0,01' });
         }
-        
-        const result = await db.run(
-            'INSERT INTO raffles (title, description, total_numbers, price_per_number, draw_date) VALUES (?, ?, ?, ?, ?)',
-            [title, description, total_numbers, price_per_number, draw_date]
-        );
-        
+
+        const result = await db.get(`
+            INSERT INTO raffles (title, description, total_numbers, price_per_number, draw_date)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id
+        `, [title, description, total_numbers, price_per_number, draw_date]);
+
         res.json({ id: result.id, message: 'Rifa criada com sucesso' });
     } catch (error) {
         console.error('Erro ao criar rifa:', error);
@@ -114,12 +107,14 @@ router.put('/raffles/:id', auth, async (req, res) => {
     try {
         const { id } = req.params;
         const { title, description, total_numbers, price_per_number, draw_date, status } = req.body;
-        
-        await db.run(
-            'UPDATE raffles SET title = ?, description = ?, total_numbers = ?, price_per_number = ?, draw_date = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-            [title, description, total_numbers, price_per_number, draw_date, status, id]
-        );
-        
+
+        await db.run(`
+            UPDATE raffles 
+            SET title = $1, description = $2, total_numbers = $3, price_per_number = $4, 
+                draw_date = $5, is_active = $6, updated_at = CURRENT_TIMESTAMP 
+            WHERE id = $7
+        `, [title, description, total_numbers, price_per_number, draw_date, status, id]);
+
         res.json({ message: 'Rifa atualizada com sucesso' });
     } catch (error) {
         console.error('Erro ao atualizar rifa:', error);
@@ -131,15 +126,14 @@ router.put('/raffles/:id', auth, async (req, res) => {
 router.delete('/raffles/:id', auth, async (req, res) => {
     try {
         const { id } = req.params;
-        
-        // Check if raffle has participants
-        const participants = await db.get('SELECT COUNT(*) as count FROM participants WHERE raffle_id = ?', [id]);
-        
-        if (participants.count > 0) {
+
+        const participants = await db.get('SELECT COUNT(*) as count FROM participants WHERE raffle_id = $1', [id]);
+
+        if (parseInt(participants.count) > 0) {
             return res.status(400).json({ error: 'Não é possível deletar uma rifa com participantes' });
         }
-        
-        await db.run('DELETE FROM raffles WHERE id = ?', [id]);
+
+        await db.run('DELETE FROM raffles WHERE id = $1', [id]);
         res.json({ message: 'Rifa deletada com sucesso' });
     } catch (error) {
         console.error('Erro ao deletar rifa:', error);
@@ -151,15 +145,15 @@ router.delete('/raffles/:id', auth, async (req, res) => {
 router.get('/raffles/:id/participants', auth, async (req, res) => {
     try {
         const { id } = req.params;
-        
+
         const participants = await db.all(`
             SELECT p.*, pay.status as payment_status, pay.qr_code
             FROM participants p
             LEFT JOIN payments pay ON p.id = pay.participant_id
-            WHERE p.raffle_id = ?
+            WHERE p.raffle_id = $1
             ORDER BY p.number
         `, [id]);
-        
+
         res.json(participants);
     } catch (error) {
         console.error('Erro ao buscar participantes:', error);
@@ -171,23 +165,23 @@ router.get('/raffles/:id/participants', auth, async (req, res) => {
 router.get('/raffles/:id/export', auth, async (req, res) => {
     try {
         const { id } = req.params;
-        
-        const raffle = await db.get('SELECT title FROM raffles WHERE id = ?', [id]);
+
+        const raffle = await db.get('SELECT title FROM raffles WHERE id = $1', [id]);
         if (!raffle) {
             return res.status(404).json({ error: 'Rifa não encontrada' });
         }
-        
+
         const participants = await db.all(`
             SELECT p.number, p.name, p.email, p.phone, p.city, p.status, p.created_at,
                    pay.status as payment_status
             FROM participants p
             LEFT JOIN payments pay ON p.id = pay.participant_id
-            WHERE p.raffle_id = ?
+            WHERE p.raffle_id = $1
             ORDER BY p.number
         `, [id]);
-        
+
         const csv = await csvExporter.exportParticipants(participants, raffle.title);
-        
+
         res.setHeader('Content-Type', 'text/csv');
         res.setHeader('Content-Disposition', `attachment; filename="rifa_${id}_participantes.csv"`);
         res.send(csv);
@@ -202,31 +196,31 @@ router.post('/raffles/:id/draw', auth, async (req, res) => {
     try {
         const { id } = req.params;
         const { lottery_number } = req.body;
-        
+
         if (!lottery_number) {
             return res.status(400).json({ error: 'Número da loteria federal é obrigatório' });
         }
-        
-        const raffle = await db.get('SELECT * FROM raffles WHERE id = ?', [id]);
+
+        const raffle = await db.get('SELECT * FROM raffles WHERE id = $1', [id]);
         if (!raffle) {
             return res.status(404).json({ error: 'Rifa não encontrada' });
         }
-        
+
         const winner_number = lottery.calculateWinnerNumber(lottery_number, raffle.total_numbers);
-        
-        await db.run(
-            'UPDATE raffles SET winner_number = ?, lottery_number = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-            [winner_number, lottery_number, 'completed', id]
-        );
-        
-        // Get winner info
+
+        await db.run(`
+            UPDATE raffles 
+            SET winner_number = $1, lottery_number = $2, is_active = false, updated_at = CURRENT_TIMESTAMP 
+            WHERE id = $3
+        `, [winner_number, lottery_number, id]);
+
         const winner = await db.get(`
             SELECT p.*, pay.status as payment_status
             FROM participants p
             LEFT JOIN payments pay ON p.id = pay.participant_id
-            WHERE p.raffle_id = ? AND p.number = ?
+            WHERE p.raffle_id = $1 AND p.number = $2
         `, [id, winner_number]);
-        
+
         res.json({
             winner_number,
             lottery_number,

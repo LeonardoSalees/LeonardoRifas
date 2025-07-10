@@ -1,13 +1,10 @@
 const express = require('express');
 const auth = require('../middleware/auth');
-// Dynamic database configuration
-let db;
-if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('postgresql')) {
-    db = require('../config/database-postgresql');
-} 
+const db = require('../config/database-postgresql');
+
 const router = express.Router();
 
-// Send WhatsApp notification to participant
+// Enviar notificação individual via WhatsApp
 router.post('/whatsapp/:participantId', auth, async (req, res) => {
     try {
         const { participantId } = req.params;
@@ -17,7 +14,7 @@ router.post('/whatsapp/:participantId', auth, async (req, res) => {
             SELECT p.*, r.title as raffle_title
             FROM participants p
             JOIN raffles r ON p.raffle_id = r.id
-            WHERE p.id = ?
+            WHERE p.id = $1
         `, [participantId]);
 
         if (!participant) {
@@ -28,7 +25,6 @@ router.post('/whatsapp/:participantId', auth, async (req, res) => {
             return res.status(400).json({ error: 'Participante não possui WhatsApp cadastrado' });
         }
 
-        // Format phone number for WhatsApp
         const phoneFormatted = participant.phone.replace(/\D/g, '');
         const whatsappUrl = `https://wa.me/55${phoneFormatted}?text=${encodeURIComponent(message)}`;
 
@@ -48,19 +44,19 @@ router.post('/whatsapp/:participantId', auth, async (req, res) => {
     }
 });
 
-// Send bulk WhatsApp notifications
+// Enviar notificações em lote
 router.post('/whatsapp/bulk/:raffleId', auth, async (req, res) => {
     try {
         const { raffleId } = req.params;
         const { message, filter } = req.body;
 
-        let whereClause = 'WHERE p.raffle_id = ?';
+        let whereClause = 'WHERE p.raffle_id = $1';
         const params = [raffleId];
 
         if (filter === 'paid') {
-            whereClause += ' AND p.status = "paid"';
+            whereClause += " AND p.status = 'paid'";
         } else if (filter === 'reserved') {
-            whereClause += ' AND p.status = "reserved"';
+            whereClause += " AND p.status = 'reserved'";
         }
 
         const participants = await db.all(`
@@ -94,12 +90,12 @@ router.post('/whatsapp/bulk/:raffleId', auth, async (req, res) => {
     }
 });
 
-// Generate winner notification message
+// Gerar mensagem do vencedor
 router.get('/winner-message/:raffleId', auth, async (req, res) => {
     try {
         const { raffleId } = req.params;
 
-        const raffle = await db.get('SELECT * FROM raffles WHERE id = ?', [raffleId]);
+        const raffle = await db.get('SELECT * FROM raffles WHERE id = $1', [raffleId]);
         if (!raffle) {
             return res.status(404).json({ error: 'Rifa não encontrada' });
         }
@@ -112,7 +108,7 @@ router.get('/winner-message/:raffleId', auth, async (req, res) => {
             SELECT p.*, r.title as raffle_title
             FROM participants p
             JOIN raffles r ON p.raffle_id = r.id
-            WHERE p.raffle_id = ? AND p.number = ?
+            WHERE p.raffle_id = $1 AND p.number = $2
         `, [raffleId, raffle.winner_number]);
 
         const message = winner ? 

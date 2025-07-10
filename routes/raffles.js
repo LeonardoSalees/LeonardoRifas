@@ -1,9 +1,5 @@
 const express = require('express');
-// Dynamic database configuration
-let db;
-if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('postgresql')) {
-    db = require('../config/database-postgresql');
-} 
+const db = require('../config/database-postgresql');
 const SecurityValidator = require('../security/validation');
 
 const router = express.Router();
@@ -21,7 +17,6 @@ router.get('/', async (req, res) => {
             GROUP BY r.id
             ORDER BY r.created_at DESC
         `);
-        
         res.json(raffles);
     } catch (error) {
         console.error('Erro ao buscar rifas:', error);
@@ -33,20 +28,19 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        
-        const raffle = await db.get('SELECT * FROM raffles WHERE id = ?', [id]);
+
+        const raffle = await db.get('SELECT * FROM raffles WHERE id = $1', [id]);
         if (!raffle) {
             return res.status(404).json({ error: 'Rifa não encontrada' });
         }
-        
-        // Get sold numbers
+
         const soldNumbers = await db.all(
-            'SELECT number FROM participants WHERE raffle_id = ? AND status IN ("reserved", "paid")',
+            `SELECT number FROM participants 
+             WHERE raffle_id = $1 AND status IN ('reserved', 'paid')`,
             [id]
         );
-        
+
         raffle.sold_numbers = soldNumbers.map(p => p.number);
-        
         res.json(raffle);
     } catch (error) {
         console.error('Erro ao buscar rifa:', error);
@@ -58,14 +52,14 @@ router.get('/:id', async (req, res) => {
 router.get('/:id/participants', async (req, res) => {
     try {
         const { id } = req.params;
-        
+
         const participants = await db.all(`
             SELECT p.number, p.name, p.status, p.created_at
             FROM participants p
-            WHERE p.raffle_id = ? AND p.status IN ('reserved', 'paid')
+            WHERE p.raffle_id = $1 AND p.status IN ('reserved', 'paid')
             ORDER BY p.number
         `, [id]);
-        
+
         res.json(participants);
     } catch (error) {
         console.error('Erro ao buscar participantes:', error);
@@ -77,12 +71,12 @@ router.get('/:id/participants', async (req, res) => {
 router.get('/:id/numbers/:number/available', async (req, res) => {
     try {
         const { id, number } = req.params;
-        
+
         const participant = await db.get(
-            'SELECT id FROM participants WHERE raffle_id = ? AND number = ?',
+            `SELECT id FROM participants WHERE raffle_id = $1 AND number = $2`,
             [id, number]
         );
-        
+
         res.json({ available: !participant });
     } catch (error) {
         console.error('Erro ao verificar disponibilidade:', error);
@@ -95,63 +89,63 @@ router.post('/:id/reserve', SecurityValidator.createRateLimit(60 * 1000, 10), as
     try {
         const { id } = req.params;
         const { number, name, email, phone, city } = req.body;
-        
-        // Input validation
+
         if (!number || !name || !email) {
             return res.status(400).json({ error: 'Número, nome e email são obrigatórios' });
         }
-        
+
         if (!SecurityValidator.validateEmail(email)) {
             return res.status(400).json({ error: 'Email inválido' });
         }
-        
+
         if (!SecurityValidator.validateName(name)) {
             return res.status(400).json({ error: 'Nome inválido' });
         }
-        
+
         if (phone && !SecurityValidator.validatePhone(phone)) {
             return res.status(400).json({ error: 'Telefone inválido' });
         }
-        
+
         if (city && !SecurityValidator.validateCity(city)) {
             return res.status(400).json({ error: 'Cidade inválida' });
         }
-        
-        // Sanitize inputs
+
         const sanitizedName = SecurityValidator.sanitizeInput(name);
         const sanitizedEmail = SecurityValidator.sanitizeInput(email);
         const sanitizedPhone = SecurityValidator.sanitizeInput(phone);
         const sanitizedCity = SecurityValidator.sanitizeInput(city);
-        
-        // Check if raffle exists and is active
-        const raffle = await db.get('SELECT * FROM raffles WHERE id = ? AND status = "active"', [id]);
+
+        const raffle = await db.get(
+            'SELECT * FROM raffles WHERE id = $1 AND is_active = true',
+            [id]
+        );
+
         if (!raffle) {
             return res.status(404).json({ error: 'Rifa não encontrada ou inativa' });
         }
-        
-        // Check if number is valid
+
         if (number < 1 || number > raffle.total_numbers) {
             return res.status(400).json({ error: 'Número inválido' });
         }
-        
-        // Check if number is already taken
+
         const existingParticipant = await db.get(
-            'SELECT id FROM participants WHERE raffle_id = ? AND number = ?',
+            'SELECT id FROM participants WHERE raffle_id = $1 AND number = $2',
             [id, number]
         );
-        
+
         if (existingParticipant) {
             return res.status(400).json({ error: 'Número já foi escolhido' });
         }
-        
-        // Reserve the number with sanitized data
+
         const result = await db.run(
-            'INSERT INTO participants (raffle_id, number, name, email, phone, city, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            `INSERT INTO participants (raffle_id, number, name, email, phone, city, status) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7) 
+             RETURNING id`,
             [id, number, sanitizedName, sanitizedEmail, sanitizedPhone, sanitizedCity, 'reserved']
         );
-        
+
         res.json({
-            participant_id: result.id,
+            participant_id: result.rows[0].id,
             message: 'Número reservado com sucesso',
             raffle_price: raffle.price_per_number
         });

@@ -88,7 +88,6 @@ class PostgreSQLDatabase {
   FROM information_schema.tables 
   WHERE table_schema = 'public';
 `);
-console.log('Tabelas encontradas após criação:', result.rows);
 
         const commands = createTablesQuery
   .split(';')
@@ -99,7 +98,6 @@ for (const command of commands) {
   await this.pool.query(command);
 }
 console.log('Tabelas PostgreSQL criadas com sucesso');
-        console.log('Tabelas PostgreSQL criadas com sucesso');
     }
 
     async createDefaultAdmin() {
@@ -114,7 +112,6 @@ console.log('Tabelas PostgreSQL criadas com sucesso');
                 const createAdmin = 'INSERT INTO users (username, password_hash) VALUES ($1, $2)';
                 await this.pool.query(createAdmin, ['admin', hashedPassword]);
                 console.log('Usuário admin criado com sucesso');
-                console.log(`Senha admin: ${adminPassword}`);
             } else {
                 console.log('Usuário admin já existe');
             }
