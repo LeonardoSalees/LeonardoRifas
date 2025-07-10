@@ -14,7 +14,7 @@ const requiredFiles = [
     'api/index.js',
     'vercel.json',
     'server.js',
-    'config/database-vercel.js',
+    'config/database-postgresql.js',
     'public/index.html',
     'public/admin-login.html',
     'public/admin.html'
@@ -40,7 +40,6 @@ if (missingFiles.length > 0) {
 // Verificar variáveis de ambiente essenciais
 console.log('\n🔑 Variáveis de ambiente necessárias no Vercel:');
 const requiredEnvVars = [
-    'VERCEL=1',
     'NODE_ENV=production',
     'SESSION_SECRET=sua-chave-secreta-forte',
     'ADMIN_PASSWORD=sua-senha-admin-segura',
