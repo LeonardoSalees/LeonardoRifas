@@ -42,7 +42,7 @@ class PostgreSQLDatabase {
                 title VARCHAR(255) NOT NULL,
                 description TEXT,
                 total_numbers INTEGER NOT NULL,
-                price DECIMAL(10,2) NOT NULL,
+                price_per_number DECIMAL(10,2) NOT NULL,
                 draw_date DATE NOT NULL,
                 is_active BOOLEAN DEFAULT true,
                 winner_number INTEGER,
@@ -83,8 +83,22 @@ class PostgreSQLDatabase {
             CREATE INDEX IF NOT EXISTS idx_payments_mercadopago ON payments(mercadopago_id);
             CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);
         `;
+        const result = await this.pool.query(`
+  SELECT table_name 
+  FROM information_schema.tables 
+  WHERE table_schema = 'public';
+`);
+console.log('Tabelas encontradas após criação:', result.rows);
 
-        await this.pool.query(createTablesQuery);
+        const commands = createTablesQuery
+  .split(';')
+  .map(cmd => cmd.trim())
+  .filter(cmd => cmd.length > 0);
+
+for (const command of commands) {
+  await this.pool.query(command);
+}
+console.log('Tabelas PostgreSQL criadas com sucesso');
         console.log('Tabelas PostgreSQL criadas com sucesso');
     }
 

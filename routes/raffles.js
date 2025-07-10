@@ -3,11 +3,7 @@ const express = require('express');
 let db;
 if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('postgresql')) {
     db = require('../config/database-postgresql');
-} else if (process.env.VERCEL === '1') {
-    db = require('../config/database-vercel');
-} else {
-    db = require('../config/database');
-}
+} 
 const SecurityValidator = require('../security/validation');
 
 const router = express.Router();

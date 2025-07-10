@@ -3,11 +3,7 @@ const express = require('express');
 let db;
 if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('postgresql')) {
     db = require('../config/database-postgresql');
-} else if (process.env.VERCEL === '1') {
-    db = require('../config/database-vercel');
-} else {
-    db = require('../config/database');
-}
+} 
 const mercadoPago = require('../config/mercadopago');
 const SecurityValidator = require('../security/validation');
 
